@@ -19,6 +19,7 @@ import logging
 from collections import OrderedDict
 from contextlib import suppress
 from datetime import datetime
+import nni
 import models
 
 import torch
@@ -80,12 +81,12 @@ parser.add_argument('-b', '--batch-size', type=int, default=64, metavar='N',
 parser.add_argument('-vb', '--validation-batch-size-multiplier', type=int, default=1, metavar='N',
                     help='ratio of validation batch size to training batch size (default: 1)')
 # search model parameters
-parser.add_argument('--embed-dim', type=int, default=384, metavar='N',
-                    help='embedding dimension for transformer module')
-parser.add_argument('--depth', type=int, default=1, metavar='N',
-                    help='transformer depth')
-parser.add_argument('--num-heads', type=int, default=1, metavar='N')
-parser.add_argument('--mlp-ratio', type=int, default=1, metavar='N')
+# parser.add_argument('--embed-dim', type=int, default=384, metavar='N',
+#                     help='embedding dimension for transformer module')
+# parser.add_argument('--depth', type=int, default=1, metavar='N',
+#                     help='transformer depth')
+# parser.add_argument('--num-heads', type=int, default=1, metavar='N')
+# parser.add_argument('--mlp-ratio', type=int, default=1, metavar='N')
 
 # Optimizer parameters
 parser.add_argument('--opt', default='adamw', type=str, metavar='OPTIMIZER',
@@ -282,6 +283,8 @@ def _parse_args():
 def main():
     setup_default_logging()
     args, args_text = _parse_args()
+    # seach space config
+    RECEIVED_PARAMS = nni.get_next_parameter()
 
     args.prefetcher = not args.no_prefetcher
     args.distributed = False
@@ -327,10 +330,7 @@ def main():
         bn_eps=args.bn_eps,
         checkpoint_path=args.initial_checkpoint,
         img_size=args.img_size,
-        embed_dim=args.embed_dim,
-        depth=args.depth,
-        num_heads=args.num_heads,
-        mlp_ratio=args.mlp_ratio)
+        **RECEIVED_PARAMS)  # 传递搜索空间参数用于创建对应模型
     
     # 这里为了torch2tflite测试增加两行
     # torch.save(model, 'checkpoint/t2t_vit_t_1.pth')
@@ -683,6 +683,7 @@ def train_epoch(
                 losses_m.update(reduced_loss.item(), input.size(0))
 
             if args.local_rank == 0:
+                nni.report_intermediate_result(losses_m.val)
                 _logger.info(
                     'Train: {} [{:>4d}/{} ({:>3.0f}%)]  '
                     'Loss: {loss.val:>9.6f} ({loss.avg:>6.4f})  '
@@ -715,6 +716,7 @@ def train_epoch(
             lr_scheduler.step_update(num_updates=num_updates, metric=losses_m.avg)
 
         end = time.time()
+        nni.report_final_result(losses_m.val)
         # end for
 
     if hasattr(optimizer, 'sync_lookahead'):

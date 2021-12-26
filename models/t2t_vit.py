@@ -43,6 +43,7 @@ default_cfgs = {
     'T2t_vit_14_wide': _cfg(),
     'T2t_vit_t_1': _cfg(),
     'Search_model': _cfg(),
+    'Test_model': _cfg(),
 }
 
 class T2T_module(nn.Module):
@@ -163,7 +164,8 @@ class T2T_ViT(nn.Module):
 
     def forward_features(self, x):
         B = x.shape[0]
-        x = self.tokens_to_token(x)
+        x = self.tokens_to_token(x) # [batch_size, 196, embed_dim]
+        # 为了和下一层维度对应起来，embed_dim要能够整除num_head
 
         cls_tokens = self.cls_token.expand(B, -1, -1)
         x = torch.cat((cls_tokens, x), dim=1)   # [32, 196, 384] -> [32, 197, 384]
@@ -320,4 +322,10 @@ def search_model(pretrained=False, **kwargs):
     # print(kwargs)
     model = T2T_ViT(tokens_type='transformer', **kwargs)    # 所有参数均来源于create_model，否则就是默认值
     model.default_cfg = default_cfgs['Search_model']
+    return model
+
+@register_model
+def test_model(pretrained=False, **kwargs):
+    model = T2T_ViT(tokens_type='transformer', embed_dim=32, depth=1, num_heads=6, mlp_ratio=1., **kwargs)
+    model.default_cfg = default_cfgs['T2t_vit_t_1']
     return model
