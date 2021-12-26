@@ -42,6 +42,7 @@ default_cfgs = {
     'T2t_vit_14_resnext': _cfg(),
     'T2t_vit_14_wide': _cfg(),
     'T2t_vit_t_1': _cfg(),
+    'Search_model': _cfg(),
 }
 
 class T2T_module(nn.Module):
@@ -312,4 +313,11 @@ def t2t_vit_t_1(pretrained=False, **kwargs):
     if pretrained:
         load_pretrained(
             model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
+    return model
+
+@register_model
+def search_model(pretrained=False, **kwargs):
+    # print(kwargs)
+    model = T2T_ViT(tokens_type='transformer', **kwargs)    # 所有参数均来源于create_model，否则就是默认值
+    model.default_cfg = default_cfgs['Search_model']
     return model

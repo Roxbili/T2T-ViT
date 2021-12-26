@@ -1,3 +1,5 @@
+#-*- coding: utf-8 -*-
+
 # Copyright (c) [2012]-[2021] Shanghai Yitu Technology Co., Ltd.
 #
 # This source code is licensed under the Clear BSD License
@@ -77,6 +79,13 @@ parser.add_argument('-b', '--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 64)')
 parser.add_argument('-vb', '--validation-batch-size-multiplier', type=int, default=1, metavar='N',
                     help='ratio of validation batch size to training batch size (default: 1)')
+# search model parameters
+parser.add_argument('--embed-dim', type=int, default=384, metavar='N',
+                    help='embedding dimension for transformer module')
+parser.add_argument('--depth', type=int, default=1, metavar='N',
+                    help='transformer depth')
+parser.add_argument('--num-heads', type=int, default=1, metavar='N')
+parser.add_argument('--mlp-ratio', type=int, default=1, metavar='N')
 
 # Optimizer parameters
 parser.add_argument('--opt', default='adamw', type=str, metavar='OPTIMIZER',
@@ -303,6 +312,7 @@ def main():
 
     torch.manual_seed(args.seed + args.rank)
 
+    # 此处的参数应该会直接传入模型中
     model = create_model(
         args.model,
         pretrained=args.pretrained,
@@ -316,7 +326,11 @@ def main():
         bn_momentum=args.bn_momentum,
         bn_eps=args.bn_eps,
         checkpoint_path=args.initial_checkpoint,
-        img_size=args.img_size)
+        img_size=args.img_size,
+        embed_dim=args.embed_dim,
+        depth=args.depth,
+        num_heads=args.num_heads,
+        mlp_ratio=args.mlp_ratio)
     
     # 这里为了torch2tflite测试增加两行
     # torch.save(model, 'checkpoint/t2t_vit_t_1.pth')
