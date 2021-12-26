@@ -6,6 +6,7 @@
 """
 Take the standard Transformer as T2T Transformer
 """
+import sys
 import torch.nn as nn
 from timm.models.layers import DropPath
 from .transformer_block import Mlp
@@ -18,15 +19,19 @@ class Attention(nn.Module):
         head_dim = dim // num_heads
         self.scale = qk_scale or head_dim ** -0.5
 
-        self.qkv = nn.Linear(dim, in_dim * 3, bias=qkv_bias)
+        self.qkv = nn.Linear(dim, in_dim * 3, bias=qkv_bias)    # 这里乘3是分别是q、k、v
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(in_dim, in_dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(self, x):
         B, N, C = x.shape
+        # print(x.shape)  # torch.Size([32, 3136, 147])
 
-        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.in_dim).permute(2, 0, 3, 1, 4)
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.in_dim).permute(2, 0, 3, 1, 4)  # 这里就1个head，是手动设置的
+        # self.qkv(x) -> [B, N, C] -> [32, 3136, 192]
+        # reshape -> [32, 3136, 3, 1, 64]
+        # permute -> torch.Size([3, 32, 1, 3136, 64])
         q, k, v = qkv[0], qkv[1], qkv[2]
 
         attn = (q * self.scale) @ k.transpose(-2, -1)

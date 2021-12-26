@@ -12,7 +12,7 @@ It was started from an early version of the PyTorch ImageNet example
 import argparse
 import time
 import yaml
-import os
+import os, sys
 import logging
 from collections import OrderedDict
 from contextlib import suppress
@@ -23,6 +23,7 @@ import torch
 import torch.nn as nn
 import torchvision.utils
 from torch.nn.parallel import DistributedDataParallel as NativeDDP
+from torchsummary import summary as summary_model
 
 from timm.data import Dataset, create_loader, resolve_data_config, Mixup, FastCollateMixup, AugMixDataset
 from timm.models import load_checkpoint, create_model, resume_checkpoint, convert_splitbn_model
@@ -316,12 +317,23 @@ def main():
         bn_eps=args.bn_eps,
         checkpoint_path=args.initial_checkpoint,
         img_size=args.img_size)
+    
+    # 这里为了torch2tflite测试增加两行
+    # torch.save(model, 'checkpoint/t2t_vit_t_1.pth')
+    # sys.exit(0)
+
+    # 调试计算图
+    # _tmp = torch.rand((32, 3, 224, 224))
+    # model(_tmp)
+    # sys.exit(0)
 
     if args.local_rank == 0:
         _logger.info('Model %s created, param count: %d' %
                      (args.model, sum([m.numel() for m in model.parameters()])))
 
     data_config = resolve_data_config(vars(args), model=model, verbose=args.local_rank == 0)
+
+    summary_model(model, data_config['input_size'], device='cpu')
 
     num_aug_splits = 0
     if args.aug_splits > 0:

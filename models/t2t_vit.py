@@ -6,6 +6,8 @@
 """
 T2T-ViT
 """
+import sys
+
 import torch
 import torch.nn as nn
 
@@ -39,6 +41,7 @@ default_cfgs = {
     'T2t_vit_t_24': _cfg(),
     'T2t_vit_14_resnext': _cfg(),
     'T2t_vit_14_wide': _cfg(),
+    'T2t_vit_t_1': _cfg(),
 }
 
 class T2T_module(nn.Module):
@@ -50,7 +53,7 @@ class T2T_module(nn.Module):
 
         if tokens_type == 'transformer':
             print('adopt transformer encoder for tokens-to-token')
-            self.soft_split0 = nn.Unfold(kernel_size=(7, 7), stride=(4, 4), padding=(2, 2))
+            self.soft_split0 = nn.Unfold(kernel_size=(7, 7), stride=(4, 4), padding=(2, 2)) # 上下左右各添加2行/列
             self.soft_split1 = nn.Unfold(kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
             self.soft_split2 = nn.Unfold(kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
 
@@ -81,14 +84,19 @@ class T2T_module(nn.Module):
 
     def forward(self, x):
         # step0: soft split
-        x = self.soft_split0(x).transpose(1, 2)
+        # print(x.shape) # torch.Size([32, 3, 224, 224])
+
+        x = self.soft_split0(x).transpose(1, 2)     # floor((feature_len - kernel_size + 2 * padding) / stride + 1)
+        # print(x.shape) # torch.Size([32, 3136, 147])
 
         # iteration1: re-structurization/reconstruction
         x = self.attention1(x)
+        # print(x.shape)  # torch.Size([32, 3136, 64])
         B, new_HW, C = x.shape
-        x = x.transpose(1,2).reshape(B, C, int(np.sqrt(new_HW)), int(np.sqrt(new_HW)))
+        x = x.transpose(1,2).reshape(B, C, int(np.sqrt(new_HW)), int(np.sqrt(new_HW)))  # 这里其实就是把Token序列换源成了图片矩阵
+        # x: [32, 64, 56, 56]
         # iteration1: soft split
-        x = self.soft_split1(x).transpose(1, 2)
+        x = self.soft_split1(x).transpose(1, 2) # [32, 576, 784]
 
         # iteration2: re-structurization/reconstruction
         x = self.attention2(x)
@@ -157,8 +165,8 @@ class T2T_ViT(nn.Module):
         x = self.tokens_to_token(x)
 
         cls_tokens = self.cls_token.expand(B, -1, -1)
-        x = torch.cat((cls_tokens, x), dim=1)
-        x = x + self.pos_embed
+        x = torch.cat((cls_tokens, x), dim=1)   # [32, 196, 384] -> [32, 197, 384]
+        x = x + self.pos_embed  # 此处pos_embed是一个定值，直接计算得到
         x = self.pos_drop(x)
 
         for blk in self.blocks:
@@ -290,6 +298,17 @@ def t2t_vit_14_wide(pretrained=False, **kwargs):
         kwargs.setdefault('qk_scale', 512 ** -0.5)
     model = T2T_ViT(tokens_type='performer', embed_dim=768, depth=4, num_heads=12, mlp_ratio=3., **kwargs)
     model.default_cfg = default_cfgs['T2t_vit_14_wide']
+    if pretrained:
+        load_pretrained(
+            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
+    return model
+
+@register_model
+def t2t_vit_t_1(pretrained=False, **kwargs):
+    if pretrained:
+        kwargs.setdefault('qk_scale', 384 ** -0.5)
+    model = T2T_ViT(tokens_type='transformer', embed_dim=384, depth=1, num_heads=2, mlp_ratio=3., **kwargs)
+    model.default_cfg = default_cfgs['T2t_vit_t_1']
     if pretrained:
         load_pretrained(
             model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
