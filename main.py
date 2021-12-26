@@ -684,6 +684,7 @@ def train_epoch(
 
             if args.local_rank == 0:
                 nni.report_intermediate_result(losses_m.val)
+                # nni.report_intermediate_result({'default': losses_m.val, 'test': 100})
                 _logger.info(
                     'Train: {} [{:>4d}/{} ({:>3.0f}%)]  '
                     'Loss: {loss.val:>9.6f} ({loss.avg:>6.4f})  '

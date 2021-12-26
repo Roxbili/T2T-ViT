@@ -6,11 +6,19 @@ trialGpuNumber: 1
 trialConcurrency: 2
 maxExperimentDuration: 24h
 maxTrialNumber: 100
-maxTrialDuration: 2m
+# maxTrialDuration: 2m  # 每个trial只训练2min
 tuner:
   name: TPE
   classArgs:
     optimize_mode: maximize
+# assessor:
+#   codeDirectory: nas
+#   className: MyAssessor.MemoryAssessor
+#   # 所有的参数都需要传递给你 Assessor 的构造函数 __init__
+#   # 例如，可以在可选的 classArgs 字段中指定
+#   classArgs:
+#     flash_mem: 864
+#     ram_mem: 330
 trainingService:
   platform: local
   useActiveGpu: True
