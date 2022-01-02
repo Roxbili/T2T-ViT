@@ -31,19 +31,7 @@ def _cfg(url='', **kwargs):
     }
 
 default_cfgs = {
-    'T2t_vit_7': _cfg(),
-    'T2t_vit_10': _cfg(),
-    'T2t_vit_12': _cfg(),
-    'T2t_vit_14': _cfg(),
-    'T2t_vit_19': _cfg(),
-    'T2t_vit_24': _cfg(),
-    'T2t_vit_t_14': _cfg(),
-    'T2t_vit_t_19': _cfg(),
-    'T2t_vit_t_24': _cfg(),
-    'T2t_vit_14_resnext': _cfg(),
-    'T2t_vit_14_wide': _cfg(),
-    'T2t_vit_t_1': _cfg(),
-    'Test_model': _cfg(),
+    'Search_model': _cfg(),
 }
 
 class T2T_module(nn.Module):
@@ -241,141 +229,8 @@ class T2T_ViT(nn.Module):
         return x_head
 
 @register_model
-def t2t_vit_7(pretrained=False, **kwargs): # adopt performer for tokens to token
-    if pretrained:
-        kwargs.setdefault('qk_scale', 256 ** -0.5)
-    model = T2T_ViT(tokens_type='performer', embed_dim=256, depth=7, num_heads=4, mlp_ratio=2., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_7']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-@register_model
-def t2t_vit_10(pretrained=False, **kwargs): # adopt performer for tokens to token
-    if pretrained:
-        kwargs.setdefault('qk_scale', 256 ** -0.5)
-    model = T2T_ViT(tokens_type='performer', embed_dim=256, depth=10, num_heads=4, mlp_ratio=2., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_10']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-@register_model
-def t2t_vit_12(pretrained=False, **kwargs): # adopt performer for tokens to token
-    if pretrained:
-        kwargs.setdefault('qk_scale', 256 ** -0.5)
-    model = T2T_ViT(tokens_type='performer', embed_dim=256, depth=12, num_heads=4, mlp_ratio=2., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_12']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-
-@register_model
-def t2t_vit_14(pretrained=False, **kwargs):  # adopt performer for tokens to token
-    if pretrained:
-        kwargs.setdefault('qk_scale', 384 ** -0.5)
-    model = T2T_ViT(tokens_type='performer', embed_dim=384, depth=14, num_heads=6, mlp_ratio=3., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_14']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-@register_model
-def t2t_vit_19(pretrained=False, **kwargs): # adopt performer for tokens to token
-    if pretrained:
-        kwargs.setdefault('qk_scale', 448 ** -0.5)
-    model = T2T_ViT(tokens_type='performer', embed_dim=448, depth=19, num_heads=7, mlp_ratio=3., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_19']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-@register_model
-def t2t_vit_24(pretrained=False, **kwargs): # adopt performer for tokens to token
-    if pretrained:
-        kwargs.setdefault('qk_scale', 512 ** -0.5)
-    model = T2T_ViT(tokens_type='performer', embed_dim=512, depth=24, num_heads=8, mlp_ratio=3., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_24']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-@register_model
-def t2t_vit_t_14(pretrained=False, **kwargs):  # adopt transformers for tokens to token
-    if pretrained:
-        kwargs.setdefault('qk_scale', 384 ** -0.5)
-    model = T2T_ViT(tokens_type='transformer', embed_dim=384, depth=14, num_heads=6, mlp_ratio=3., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_t_14']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-@register_model
-def t2t_vit_t_19(pretrained=False, **kwargs):  # adopt transformers for tokens to token
-    if pretrained:
-        kwargs.setdefault('qk_scale', 448 ** -0.5)
-    model = T2T_ViT(tokens_type='transformer', embed_dim=448, depth=19, num_heads=7, mlp_ratio=3., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_t_19']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-@register_model
-def t2t_vit_t_24(pretrained=False, **kwargs):  # adopt transformers for tokens to token
-    if pretrained:
-        kwargs.setdefault('qk_scale', 512 ** -0.5)
-    model = T2T_ViT(tokens_type='transformer', embed_dim=512, depth=24, num_heads=8, mlp_ratio=3., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_t_24']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-# rexnext and wide structure
-@register_model
-def t2t_vit_14_resnext(pretrained=False, **kwargs):
-    if pretrained:
-        kwargs.setdefault('qk_scale', 384 ** -0.5)
-    model = T2T_ViT(tokens_type='performer', embed_dim=384, depth=14, num_heads=32, mlp_ratio=3., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_14_resnext']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-@register_model
-def t2t_vit_14_wide(pretrained=False, **kwargs):
-    if pretrained:
-        kwargs.setdefault('qk_scale', 512 ** -0.5)
-    model = T2T_ViT(tokens_type='performer', embed_dim=768, depth=4, num_heads=12, mlp_ratio=3., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_14_wide']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-@register_model
-def t2t_vit_t_1(pretrained=False, **kwargs):
-    if pretrained:
-        kwargs.setdefault('qk_scale', 384 ** -0.5)
-    model = T2T_ViT(tokens_type='transformer', embed_dim=384, depth=1, num_heads=2, mlp_ratio=3., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_t_1']
-    if pretrained:
-        load_pretrained(
-            model, num_classes=model.num_classes, in_chans=kwargs.get('in_chans', 3))
-    return model
-
-@register_model
-def test_model(pretrained=False, **kwargs):
-    model = T2T_ViT(tokens_type='transformer', embed_dim=32, depth=1, num_heads=6, mlp_ratio=1., **kwargs)
-    model.default_cfg = default_cfgs['T2t_vit_t_1']
+def search_model(pretrained=False, **kwargs):
+    # print(kwargs)
+    model = T2T_ViT(tokens_type='transformer', **kwargs)    # 所有参数均来源于create_model，否则就是默认值
+    model.default_cfg = default_cfgs['Search_model']
     return model

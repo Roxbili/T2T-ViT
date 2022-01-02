@@ -1,6 +1,6 @@
 experimentName: TEST
 searchSpaceFile: search_space/search_space.json
-trialCommand: python main.py /home/fanding/dataset/ILSVRC2012 --model search_model -b 32 --lr 1e-3 --weight-decay .03 --img-size 224
+trialCommand: python main.py /home/fanding/dataset/ILSVRC2012 --model search_model -b 32 --lr 1e-3 --weight-decay .03 --epochs 100
 trialCodeDirectory: ../
 trialGpuNumber: 1
 trialConcurrency: 2

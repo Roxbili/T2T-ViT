@@ -293,6 +293,13 @@ def main():
     args, args_text = _parse_args()
     # seach space config
     RECEIVED_PARAMS = nni.get_next_parameter()
+    # 若搜索空间的参数存在于args中，那么替换args的值，否则放到新的dict中
+    model_params = {}
+    for key in RECEIVED_PARAMS:
+        if hasattr(args, key) == True:
+            setattr(args, key, RECEIVED_PARAMS[key])
+        else:
+            model_params[key] = RECEIVED_PARAMS[key]
 
     args.prefetcher = not args.no_prefetcher
     args.distributed = False
@@ -338,7 +345,7 @@ def main():
         bn_eps=args.bn_eps,
         checkpoint_path=args.initial_checkpoint,
         img_size=args.img_size,
-        **RECEIVED_PARAMS)  # 传递搜索空间参数用于创建对应模型
+        **model_params)  # 传递搜索空间参数用于创建对应模型
     
     # 这里为了torch2tflite测试增加两行
     # torch.save(model, 'checkpoint/t2t_vit_t_1.pth')
@@ -366,7 +373,6 @@ def main():
     MemStatistic.reset_mem_eval()
 
     summary_model(model, data_config['input_size'], device='cpu')
-    sys.exit(0)
 
     num_aug_splits = 0
     if args.aug_splits > 0:
