@@ -36,6 +36,8 @@ from timm.optim import create_optimizer
 from timm.scheduler import create_scheduler
 from timm.utils import ApexScaler, NativeScaler
 
+from models import MemStatistic
+
 torch.backends.cudnn.benchmark = True
 _logger = logging.getLogger('train')
 
@@ -247,6 +249,12 @@ parser.add_argument("--local_rank", default=0, type=int)
 parser.add_argument('--use-multi-epochs-loader', action='store_true', default=False,
                     help='use the multi-epochs-loader to save time at the beginning of every epoch')
 
+# Tiny device
+parser.add_argument('--flash', type=int, default=1000, metavar='N',
+                    help='Tiny device Flash size(kB)')
+parser.add_argument('--ram', type=int, default=330, metavar='N',
+                    help='Tiny device RAM size(kB)')
+
 try:
     from apex import amp
     from apex.parallel import DistributedDataParallel as ApexDDP
@@ -347,7 +355,18 @@ def main():
 
     data_config = resolve_data_config(vars(args), model=model, verbose=args.local_rank == 0)
 
+    # 统计并确定该模型是否满足推理内存需求
+    MemStatistic.set_mem_eval()
+    _x = torch.rand(1, *data_config['input_size'])
+    model(_x)
+    _name, _total_size = MemStatistic.get_forward_info('int8')
+    if _total_size > args.ram:
+        raise Exception('Model maximum forward size is out of tiny device RAM, int8 max forward layer name: %s, size: %.2f kB'
+                            % (_name, _total_size))
+    MemStatistic.reset_mem_eval()
+
     summary_model(model, data_config['input_size'], device='cpu')
+    sys.exit(0)
 
     num_aug_splits = 0
     if args.aug_splits > 0:

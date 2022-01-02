@@ -18,6 +18,7 @@ import numpy as np
 from .token_transformer import Token_transformer
 from .token_performer import Token_performer
 from .transformer_block import Block, get_sinusoid_encoding
+from .statistic import MemStatistic
 
 def _cfg(url='', **kwargs):
     return {
@@ -85,6 +86,8 @@ class T2T_module(nn.Module):
         self.num_patches = (img_size // (4 * 2 * 2)) * (img_size // (4 * 2 * 2))  # there are 3 sfot split, stride are 4,2,2 seperately
 
     def forward(self, x):
+        if MemStatistic.mem_eval:
+            self.forward_mem_eval(x)
         # step0: soft split
         # print(x.shape) # torch.Size([32, 3, 224, 224])
 
@@ -109,6 +112,32 @@ class T2T_module(nn.Module):
 
         # final tokens
         x = self.project(x)
+
+        return x
+    
+    def forward_mem_eval(self, x):
+        '''峰值内存估算'''
+        x_sp0 = self.soft_split0(x).transpose(1, 2)     # floor((feature_len - kernel_size + 2 * padding) / stride + 1)
+        MemStatistic.record([x.shape], [x_sp0.shape], 't2t_module_sp0')    # transpose暂时忽略
+
+        x = self.attention1(x_sp0)
+        B, new_HW, C = x.shape
+        x = x.transpose(1,2).reshape(B, C, int(np.sqrt(new_HW)), int(np.sqrt(new_HW)))  # 这里其实就是把Token序列换源成了图片矩阵
+        # x: [32, 64, 56, 56]
+        # iteration1: soft split
+        x_sp1 = self.soft_split1(x).transpose(1, 2) # [32, 576, 784]
+        MemStatistic.record([x.shape], [x_sp1.shape], 't2t_module_sp1')    # transpose暂时忽略
+
+        x = self.attention2(x_sp1)
+        B, new_HW, C = x.shape
+        x = x.transpose(1, 2).reshape(B, C, int(np.sqrt(new_HW)), int(np.sqrt(new_HW)))
+        # iteration2: soft split
+        x_sp2 = self.soft_split2(x).transpose(1, 2)
+        MemStatistic.record([x.shape], [x_sp2.shape], 't2t_module_sp2')    # transpose暂时忽略
+
+        # final tokens
+        x = self.project(x_sp2)
+        MemStatistic.record([x_sp2.shape], [x.shape], 't2t_module_project')
 
         return x
 
@@ -179,9 +208,38 @@ class T2T_ViT(nn.Module):
         return x[:, 0]
 
     def forward(self, x):
+        if MemStatistic.mem_eval:
+            self.forward_mem_eval(x)
+
         x = self.forward_features(x)
         x = self.head(x)
         return x
+
+    def forward_mem_eval(self, x):
+        '''用于评估推理过程中峰值内存'''
+
+        # forward_features
+        B = x.shape[0]
+        x = self.tokens_to_token(x)
+
+        cls_tokens = self.cls_token.expand(B, -1, -1)
+        x = torch.cat((cls_tokens, x), dim=1)   # [32, 196, 384] -> [32, 197, 384]
+        x = x + self.pos_embed  # 此处pos_embed是一个定值，直接计算得到
+        MemStatistic.record([x.shape], [x.shape], 't2t_vit_x+pos')
+        x = self.pos_drop(x)
+
+        for blk in self.blocks:
+            x = blk(x)
+
+        MemStatistic.record([x.shape], [x.shape], 't2t_vit_norm')
+        x = self.norm(x)
+        x = x[:, 0]
+
+        # head
+        x_head = self.head(x)
+        MemStatistic.record([x.shape], [x_head.shape], 't2t_vit_head')
+        assert len(MemStatistic.reserve_stack) == 0
+        return x_head
 
 @register_model
 def t2t_vit_7(pretrained=False, **kwargs): # adopt performer for tokens to token

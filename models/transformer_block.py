@@ -11,6 +11,8 @@ import torch.nn as nn
 import numpy as np
 from timm.models.layers import DropPath
 
+from .statistic import MemStatistic
+
 class Mlp(nn.Module):
     def __init__(self, in_features, hidden_features=None, out_features=None, act_layer=nn.GELU, drop=0.):
         super().__init__()
@@ -22,11 +24,25 @@ class Mlp(nn.Module):
         self.drop = nn.Dropout(drop)
 
     def forward(self, x):
+        if MemStatistic.mem_eval:
+            self.forward_mem_eval(x)
+
         x = self.fc1(x)
         x = self.act(x)
         x = self.drop(x)
         x = self.fc2(x)
         x = self.drop(x)
+        return x
+
+    def forward_mem_eval(self, x):
+        x_fc1 = self.fc1(x)
+        MemStatistic.record([x.shape], [x_fc1.shape], 'fc1')
+        x_act = self.act(x_fc1)
+        MemStatistic.record([x.shape], [x_act.shape], 'act')
+        x_drop = self.drop(x_act)
+        x_fc2 = self.fc2(x_drop)
+        MemStatistic.record([x.shape], [x_fc2.shape], 'fc2')
+        x = self.drop(x_fc2)
         return x
 
 class Attention(nn.Module):
@@ -43,6 +59,9 @@ class Attention(nn.Module):
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(self, x):
+        if MemStatistic.mem_eval:
+            self.forward_mem_eval(x)
+
         B, N, C = x.shape
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv[0], qkv[1], qkv[2]
@@ -55,6 +74,25 @@ class Attention(nn.Module):
         x = (attn @ v).transpose(1, 2).reshape(B, N, C)
         x = self.proj(x)
         x = self.proj_drop(x)
+        return x
+
+    def forward_mem_eval(self, x):
+        B, N, C = x.shape
+        qkv = self.qkv(x)
+        MemStatistic.record([x.shape], [qkv.shape], 'transformer_block_qkv')
+        qkv = qkv.reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
+        q, k, v = qkv[0], qkv[1], qkv[2]
+
+        attn = (q @ k.transpose(-2, -1)) * self.scale
+        MemStatistic.record([q.shape, k.shape], [attn.shape], 'transformer_block_attn')
+        attn = attn.softmax(dim=-1)
+        attn = self.attn_drop(attn)
+
+        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
+        MemStatistic.record([attn.shape, v.shape], [x.shape], 'transformer_block_attn*v')
+        x_proj = self.proj(x)
+        MemStatistic.record([x.shape], [x_proj.shape], 'transformer_block_proj')
+        x = self.proj_drop(x_proj)
         return x
 
 class Block(nn.Module):
@@ -71,8 +109,27 @@ class Block(nn.Module):
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
     def forward(self, x):
+        if MemStatistic.mem_eval:
+            self.forward_mem_eval(x)
+
         x = x + self.drop_path(self.attn(self.norm1(x)))
         x = x + self.drop_path(self.mlp(self.norm2(x)))
+        return x
+
+    def forward_mem_eval(self, x):
+        MemStatistic.push_reserve([x.shape])
+        MemStatistic.record([x.shape], [x.shape], 'transformer_block_norm1')
+        x_attn = self.attn(self.norm1(x))
+        x = x + self.drop_path(x_attn)
+        MemStatistic.record([x_attn.shape, x.shape], [x.shape], 'transformer_block_x+x_attn')
+        MemStatistic.pop_reserve()
+
+        MemStatistic.push_reserve([x.shape])
+        MemStatistic.record([x.shape], [x.shape], 'transformer_block_norm2')
+        x_mlp = self.mlp(self.norm2(x))
+        x = x + self.drop_path(x_mlp)
+        MemStatistic.record([x_mlp.shape, x.shape], [x.shape], 'transformer_block_x+x_mlp')
+        MemStatistic.pop_reserve()
         return x
 
 
