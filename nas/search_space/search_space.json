@@ -3,5 +3,6 @@
     "depth":{"_type":"randint","_value":[1, 8]},
     "num_heads":{"_type":"choice","_value":[1, 2, 4, 8]},
     "mlp_ratio":{"_type":"choice", "_value":[1, 2, 3, 4]},
-    "img_size":{"_type":"choice", "_value":[224, 144, 112]}
+    "img_size":{"_type":"choice", "_value":[224, 144, 112]},
+    "kernel_size":{"_type":"choice", "_value":[7, 12, 16]}
 }

@@ -7,6 +7,7 @@
 T2T-ViT
 """
 import sys
+import math
 
 import torch
 import torch.nn as nn
@@ -38,16 +39,17 @@ class T2T_module(nn.Module):
     """
     Tokens-to-Token encoding module
     """
-    def __init__(self, img_size=224, tokens_type='performer', in_chans=3, embed_dim=768, token_dim=64):
+    def __init__(self, img_size=224, tokens_type='performer', in_chans=3, embed_dim=768, token_dim=64, kernel_size=7, overlap_ratio=0.2):
         super().__init__()
+        sp0_stride = round(kernel_size * (1 - overlap_ratio))
 
         if tokens_type == 'transformer':
             print('adopt transformer encoder for tokens-to-token')
-            self.soft_split0 = nn.Unfold(kernel_size=(7, 7), stride=(4, 4), padding=(2, 2)) # 上下左右各添加2行/列
+            self.soft_split0 = nn.Unfold(kernel_size=kernel_size, stride=sp0_stride, padding=(2, 2)) # 上下左右各添加2行/列
             self.soft_split1 = nn.Unfold(kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
             self.soft_split2 = nn.Unfold(kernel_size=(3, 3), stride=(2, 2), padding=(1, 1))
 
-            self.attention1 = Token_transformer(dim=in_chans * 7 * 7, in_dim=token_dim, num_heads=1, mlp_ratio=1.0)
+            self.attention1 = Token_transformer(dim=in_chans * kernel_size * kernel_size, in_dim=token_dim, num_heads=1, mlp_ratio=1.0)
             self.attention2 = Token_transformer(dim=token_dim * 3 * 3, in_dim=token_dim, num_heads=1, mlp_ratio=1.0)
             self.project = nn.Linear(token_dim * 3 * 3, embed_dim)
 
@@ -70,7 +72,14 @@ class T2T_module(nn.Module):
             self.soft_split1 = nn.Conv2d(token_dim, token_dim, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)) # the 2nd convolution
             self.project = nn.Conv2d(token_dim, embed_dim, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1)) # the 3rd convolution
 
-        self.num_patches = (img_size // (4 * 2 * 2)) * (img_size // (4 * 2 * 2))  # there are 3 sfot split, stride are 4,2,2 seperately
+        # self.num_patches = (img_size // (4 * 2 * 2)) * (img_size // (4 * 2 * 2))  # there are 3 sfot split, stride are 4,2,2 seperately
+        self.num_patches = self._unfold_shape(img_size, kernel_size, sp0_stride, 2)
+        self.num_patches = self._unfold_shape(self.num_patches, 3, 2, 1)
+        self.num_patches = self._unfold_shape(self.num_patches, 3, 2, 1)
+        self.num_patches = self.num_patches ** 2
+
+    def _unfold_shape(self, size: int, kernel_size: int, stride:int, padding: int):
+        return math.floor((size - kernel_size + 2 * padding) / stride + 1)
 
     def forward(self, x):
         if MemStatistic.mem_eval:
@@ -131,13 +140,14 @@ class T2T_module(nn.Module):
 class T2T_ViT(nn.Module):
     def __init__(self, img_size=224, tokens_type='performer', in_chans=3, num_classes=1000, embed_dim=768, depth=12,
                  num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0.,
-                 drop_path_rate=0., norm_layer=nn.LayerNorm, token_dim=64):
+                 drop_path_rate=0., norm_layer=nn.LayerNorm, token_dim=64, kernel_size=7, overlap_ratio=0.2):
         super().__init__()
         self.num_classes = num_classes
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
 
         self.tokens_to_token = T2T_module(
-                img_size=img_size, tokens_type=tokens_type, in_chans=in_chans, embed_dim=embed_dim, token_dim=token_dim)
+                img_size=img_size, tokens_type=tokens_type, in_chans=in_chans, embed_dim=embed_dim, token_dim=token_dim,
+                kernel_size=kernel_size, overlap_ratio=overlap_ratio)
         num_patches = self.tokens_to_token.num_patches
 
         self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
