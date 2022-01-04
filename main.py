@@ -248,6 +248,8 @@ parser.add_argument('--tta', type=int, default=0, metavar='N',
 parser.add_argument("--local_rank", default=0, type=int)
 parser.add_argument('--use-multi-epochs-loader', action='store_true', default=False,
                     help='use the multi-epochs-loader to save time at the beginning of every epoch')
+parser.add_argument('--search', action='store_true', default=False,
+                    help='Search model for tiny')
 
 # Tiny device
 parser.add_argument('--flash', type=int, default=1000, metavar='N',
@@ -293,6 +295,15 @@ def main():
     args, args_text = _parse_args()
     # seach space config
     RECEIVED_PARAMS = nni.get_next_parameter()
+
+    # 为了调试方便定死的参数
+    # RECEIVED_PARAMS['embed_dim'] = 384
+    # RECEIVED_PARAMS['depth'] = 6
+    # RECEIVED_PARAMS['num_heads'] = 1
+    # RECEIVED_PARAMS['mlp_ratio'] = 2
+    # RECEIVED_PARAMS['img_size'] = 144
+    # RECEIVED_PARAMS['kernel_size'] = 16
+
     # 若搜索空间的参数存在于args中，那么替换args的值，否则放到新的dict中
     model_params = {}
     for key in RECEIVED_PARAMS:
@@ -363,14 +374,15 @@ def main():
     data_config = resolve_data_config(vars(args), model=model, verbose=args.local_rank == 0)
 
     # 统计并确定该模型是否满足推理内存需求
-    MemStatistic.set_mem_eval()
-    _x = torch.rand(1, *data_config['input_size'])
-    model(_x)
-    _name, _total_size = MemStatistic.get_forward_info('int8')
-    if _total_size > args.ram:
-        raise Exception('Model maximum forward size is out of tiny device RAM, int8 max forward layer name: %s, size: %.2f kB'
-                            % (_name, _total_size))
-    MemStatistic.reset_mem_eval()
+    if args.search:
+        MemStatistic.set_mem_eval()
+        _x = torch.rand(1, *data_config['input_size'])
+        model(_x)
+        _name, _total_size = MemStatistic.get_forward_info('int8')
+        if _total_size > args.ram:
+            raise Exception('Model maximum forward size is out of tiny device RAM, int8 max forward layer name: %s, size: %.2f kB'
+                                % (_name, _total_size))
+        MemStatistic.reset_mem_eval()
 
     summary_model(model, data_config['input_size'], device='cpu')
 
