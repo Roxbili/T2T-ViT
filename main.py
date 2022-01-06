@@ -27,6 +27,7 @@ import torch.nn as nn
 import torchvision.utils
 from torch.nn.parallel import DistributedDataParallel as NativeDDP
 from torchsummary import summary as summary_model
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 from timm.data import Dataset, create_loader, resolve_data_config, Mixup, FastCollateMixup, AugMixDataset
 from timm.models import load_checkpoint, create_model, resume_checkpoint, convert_splitbn_model
@@ -573,6 +574,12 @@ def main():
         crop_pct=data_config['crop_pct'],
         pin_memory=args.pin_mem,
     )
+
+    if not args.prefetcher:     # 将数据一次性加载进内存，避免磁盘读取
+        print('begin load loader_train to memory')
+        loader_train = list(loader_train)
+        print('begin load loader_eval to memory')
+        loader_eval = list(loader_eval)
 
     if args.jsd:
         assert num_aug_splits > 1  # JSD only valid with aug splits set

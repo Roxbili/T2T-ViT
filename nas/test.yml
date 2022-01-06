@@ -1,11 +1,11 @@
 experimentName: TEST
 searchSpaceFile: search_space/search_space.json
-trialCommand: python main.py /home/LAB/leifd/dataset/ILSVRC2012 --model search_model -b 1536 --lr 1e-3 --weight-decay .03 --epochs 100 --workers 2 --pin-mem --search
+trialCommand: python main.py /home/LAB/leifd/dataset/ILSVRC2012 --model search_model -b 1536 --lr 1e-3 --weight-decay .03 --epochs 300 --workers 2 --pin-mem --search
 # trialCommand: python main.py /home/fanding/dataset/ILSVRC2012 --model search_model -b 512 --lr 1e-3 --weight-decay .03 --epochs 100 --workers 2 --pin-mem --search
 trialCodeDirectory: ../
 trialGpuNumber: 1   # 这是每个trial使用多少个gpu
 trialConcurrency: 16
-maxExperimentDuration: 24h
+maxExperimentDuration: 4d
 maxTrialNumber: 300
 # maxTrialDuration: 2m  # 每个trial只训练2min
 tuner:
