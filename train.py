@@ -89,6 +89,8 @@ parser.add_argument('--dataset-download', action='store_true', default=False,
                     help='Allow download of dataset for torch/ and tfds/ datasets that support it.')
 parser.add_argument('--class-map', default='', type=str, metavar='FILENAME',
                     help='path to class to idx mapping file (default: "")')
+parser.add_argument('--img-load', default='numpy', type=str,
+                    help='image load method, one of ("numpy", "PIL", "jpeg4py", "cv2")')
 
 # Model parameters
 parser.add_argument('--model', default='T2t_vit_14', type=str, metavar='MODEL',
@@ -338,14 +340,16 @@ def main():
 
     # seach space config
     RECEIVED_PARAMS = nni.get_next_parameter()
+    # output_dir path
+    args.experiment = os.path.join(nni.get_experiment_id(), nni.get_trial_id())
 
     # 为了调试方便定死的参数
-    # RECEIVED_PARAMS['embed_dim'] = 384
-    # RECEIVED_PARAMS['depth'] = 6
-    # RECEIVED_PARAMS['num_heads'] = 1
-    # RECEIVED_PARAMS['mlp_ratio'] = 2
-    # RECEIVED_PARAMS['img_size'] = 144
-    # RECEIVED_PARAMS['kernel_size'] = 16
+    RECEIVED_PARAMS['embed_dim'] = 384
+    RECEIVED_PARAMS['depth'] = 6
+    RECEIVED_PARAMS['num_heads'] = 1
+    RECEIVED_PARAMS['mlp_ratio'] = 2
+    RECEIVED_PARAMS['img_size'] = 144
+    RECEIVED_PARAMS['kernel_size'] = 16
 
     # 若搜索空间的参数存在于args中，那么替换args的值，否则放到新的dict中
     model_params = {}
@@ -551,12 +555,14 @@ def main():
         class_map=args.class_map,
         download=args.dataset_download,
         batch_size=args.batch_size,
-        repeats=args.epoch_repeats)
+        repeats=args.epoch_repeats,
+        img_load=args.img_load)
     dataset_eval = create_dataset(
         args.dataset, root=args.data_dir, split=args.val_split, is_training=False,
         class_map=args.class_map,
         download=args.dataset_download,
-        batch_size=args.batch_size)
+        batch_size=args.batch_size,
+        img_load=args.img_load)
 
     # setup mixup / cutmix
     collate_fn = None
