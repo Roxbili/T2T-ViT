@@ -2,16 +2,16 @@ experimentName: TEST
 searchSpaceFile: search_space/search_space.json
 
 # za pc/v100
-# trialCommand: python train.py /home/fanding/dataset/ILSVRC2012 --model search_model -b 4096 --lr 1e-3 --weight-decay .03 --epochs 100 --workers 4 --pin-mem --search --no-prefetche
-trialCommand: python train.py /home/fanding/dataset/ILSVRC2012_npy --model search_model -b 4096 --lr 1e-3 --weight-decay .03 --epochs 300 --workers 4 --pin-mem --search --no-prefetche
+# trialCommand: python train.py /home/fanding/dataset/ILSVRC2012 --model search_model -b 4096 --lr 1e-3 --weight-decay .03 --epochs 100 --workers 4 --pin-mem --search
+# trialCommand: python train.py /home/fanding/dataset/ILSVRC2012_npy --model search_model -b 4096 --lr 1e-3 --weight-decay .03 --epochs 300 --workers 4 --pin-mem --search
 # act
 # trialCommand: python train.py /home/LAB/leifd/dataset/ILSVRC2012 --model search_model -b 8192 --lr 1e-3 --weight-decay .03 --epochs 300 --workers 4 --pin-mem --search --no-prefetcher
-# trialCommand: python train.py /home/LAB/leifd/dataset/ILSVRC2012_npy --model search_model -b 8192 --lr 1e-3 --weight-decay .03 --epochs 300 --workers 4 --pin-mem --search --no-prefetcher
+trialCommand: python train.py /home/LAB/leifd/dataset/ILSVRC2012_lmdb --model search_model -b 32 --lr 1e-3 --weight-decay .03 --epochs 300 --workers 2 --pin-mem --search -d lmdb --use-multi-epochs-loader
 
 trialCodeDirectory: ../
 trialGpuNumber: 1   # 这是每个trial使用多少个gpu
 trialConcurrency: 4
-maxExperimentDuration: 4d
+maxExperimentDuration: 5d
 maxTrialNumber: 300
 # maxTrialDuration: 2m  # 每个trial只训练2min
 tuner:
@@ -30,5 +30,5 @@ trainingService:
   platform: local
   useActiveGpu: True
   # gpuIndices: 0,1,2,3
-  gpuIndices: 1
-  maxTrialNumberPerGpu: 1
+  # gpuIndices: 1
+  maxTrialNumberPerGpu: 4

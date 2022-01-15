@@ -344,12 +344,12 @@ def main():
     args.experiment = os.path.join(nni.get_experiment_id(), nni.get_trial_id())
 
     # 为了调试方便定死的参数
-    RECEIVED_PARAMS['embed_dim'] = 384
-    RECEIVED_PARAMS['depth'] = 6
-    RECEIVED_PARAMS['num_heads'] = 1
-    RECEIVED_PARAMS['mlp_ratio'] = 2
-    RECEIVED_PARAMS['img_size'] = 144
-    RECEIVED_PARAMS['kernel_size'] = 16
+    # RECEIVED_PARAMS['embed_dim'] = 384
+    # RECEIVED_PARAMS['depth'] = 6
+    # RECEIVED_PARAMS['num_heads'] = 1
+    # RECEIVED_PARAMS['mlp_ratio'] = 2
+    # RECEIVED_PARAMS['img_size'] = 144
+    # RECEIVED_PARAMS['kernel_size'] = 16
 
     # 若搜索空间的参数存在于args中，那么替换args的值，否则放到新的dict中
     model_params = {}
@@ -633,10 +633,13 @@ def main():
     )
 
     if not args.prefetcher:     # 将数据一次性加载进内存，避免磁盘读取
+        start_time = time.time()
         _logger.info('begin load loader_train to memory')
         loader_train = list(loader_train)
         _logger.info('begin load loader_eval to memory')
         loader_eval = list(loader_eval)
+        end_time = time.time()
+        _logger.info('%s load loader time: %.3f' % (args.img_load, (end_time - start_time)))
 
     # setup loss function
     if args.jsd_loss:
@@ -753,6 +756,15 @@ def train_one_epoch(
     end = time.time()
     last_idx = len(loader) - 1
     num_updates = epoch * len(loader)
+    # with torch.profiler.profile(
+    #     schedule=torch.profiler.schedule(
+    #         wait=2,
+    #         warmup=2,
+    #         active=6,
+    #         repeat=1),
+    #     on_trace_ready=torch.profiler.tensorboard_trace_handler('profile/'),
+    #     with_stack=True
+    # ) as profiler:
     for batch_idx, (input, target) in enumerate(loader):
         last_batch = batch_idx == last_idx
         data_time_m.update(time.time() - end)
@@ -784,6 +796,7 @@ def train_one_epoch(
                     model_parameters(model, exclude_head='agc' in args.clip_mode),
                     value=args.clip_grad, mode=args.clip_mode)
             optimizer.step()
+        # profiler.step()
 
         if model_ema is not None:
             model_ema.update(model)
@@ -834,8 +847,8 @@ def train_one_epoch(
             lr_scheduler.step_update(num_updates=num_updates, metric=losses_m.avg)
 
         end = time.time()
-        nni.report_final_result(losses_m.val)
         # end for
+    nni.report_final_result(losses_m.val)
 
     if hasattr(optimizer, 'sync_lookahead'):
         optimizer.sync_lookahead()

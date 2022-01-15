@@ -9,6 +9,8 @@
 ### imagenet2npy
 [imagenet2npy.py](https://github.com/Roxbili/imagenet_prepare/blob/main/imagenet2npy.py)
 
+(无法将整个numpy导入内存，880+G太大了，之前有jpeg编码的时候100G+还行)
+
 ### jpeg4py(弃用)
 1. 安装python库：
     ```bash
