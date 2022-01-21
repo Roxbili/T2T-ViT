@@ -45,7 +45,7 @@ python ${SCRIPT_NAME} ${DATASET_DST} --model search_model -b 64 --lr 1e-3 --weig
 # python -m torch.distributed.launch --nproc_per_node=4 ${SCRIPT_NAME} ${DATASET_SRC} --model search_model -b 8192 --lr 1e-3 --weight-decay .03 --epochs 300 --workers 2 --pin-mem --search -d lmdb --no-prefetcher
 
 ###### nni
-# nnictl create --config nas/test.yml -p 8877
+# nnictl create --config nas/imagenet.yml -p 8877
 # # nnictl experiment list
 # nnictl stop exp_id
 # nnictl view uKJofsHS -p 8877
