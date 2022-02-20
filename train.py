@@ -341,7 +341,8 @@ def main():
     # seach space config
     RECEIVED_PARAMS = nni.get_next_parameter()
     # output_dir path
-    args.experiment = os.path.join(nni.get_experiment_id(), nni.get_trial_id())
+    if args.search:
+        args.experiment = os.path.join(nni.get_experiment_id(), nni.get_trial_id())
 
     # 为了调试方便定死的参数
     # RECEIVED_PARAMS['embed_dim'] = 384
